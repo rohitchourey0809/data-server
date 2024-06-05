@@ -1,25 +1,34 @@
 const jsonServer = require("json-server");
-const server = jsonServer.create();
-const router = jsonServer.router("db.json");
+const low = require("lowdb");
+const Memory = require("lowdb/adapters/Memory");
+const fs = require("fs");
 require("dotenv").config();
 
-// Make sure to use the default middleware
+const server = jsonServer.create();
+
+// Use Memory adapter for in-memory database
+const adapter = new Memory();
+const db = low(adapter);
+
+// Load db.json data into in-memory database
+const data = JSON.parse(fs.readFileSync("db.json", "utf-8"));
+db.defaults(data).write();
+
 const middlewares = jsonServer.defaults();
 
 server.use(middlewares);
-// Add this before server.use(router)
 server.use(
-  // Add custom route here if needed
   jsonServer.rewriter({
     "/api/*": "/$1",
   })
 );
+
+const router = jsonServer.router(db);
 server.use(router);
-// Listen to port
+
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
-  console.log(`JSON Server is running ${port}`);
+  console.log(`JSON Server is running on port ${port}`);
 });
 
-// Export the Server API
 module.exports = server;
